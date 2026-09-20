@@ -1,0 +1,13 @@
+### トップページ
+GET http://localhost:3000/
+
+### 記事の一覧
+GET http://localhost:3000/posts/
+
+### 記事の作成
+POST http://localhost:3000/posts/
+Content-Type: application/json
+
+{
+  "body": "本文です"
+}
