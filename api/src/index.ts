@@ -1,5 +1,5 @@
 import express, {type Express} from 'express';
-
+import {db} from './db.ts';
 interface Post {
   id: number;
   title: string;
