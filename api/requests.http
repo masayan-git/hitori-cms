@@ -9,5 +9,8 @@ POST http://localhost:3000/posts/
 Content-Type: application/json
 
 {
-  "body": "本文です"
+  "slug": "232555ddtttt",
+  "title": "タイトルですrerererere",
+  "body": "本文です",
+  "published": 1
 }

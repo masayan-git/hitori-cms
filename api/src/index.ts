@@ -1,27 +1,36 @@
 import express, { type Express } from 'express';
 import { db } from './db.ts';
+
 interface Post {
   id: number;
+  slug: string;
   title: string;
   body: string;
+  published: 0 | 1;
 }
 
 const app: Express = express();
 const port = 3000;
-const postsContents: Post[] = [];
-let postId = 0;
 
-function savePost(reqInput: { title: string; body: string }): Post {
-  postId = postId + 1;
-  const post: Post = {
-    id: postId,
-    title: reqInput.title,
-    body: reqInput.body,
-  };
+function savePost(reqInput: {
+  slug: string;
+  title: string;
+  body: string;
+  published?: 0 | 1;
+}): Post | undefined {
+  const insert = db.prepare(
+    'INSERT INTO posts (slug, title, body, published) VALUES (@slug, @title, @body, @published)',
+  );
 
-  postsContents.push(post);
+  const lastInsertRowid = insert.run({
+    ...reqInput,
+    published: reqInput.published ?? 0,
+  }).lastInsertRowid;
 
-  return post;
+  const statement = db.prepare('SELECT * FROM posts WHERE id = ?');
+  const row = statement.get(lastInsertRowid) as Post | undefined;
+
+  return row;
 }
 
 app.use(express.json());
@@ -31,7 +40,8 @@ app.get('/', (_req, res) => {
 });
 
 app.get('/posts', (_req, res) => {
-  res.json(postsContents);
+  const rows = db.prepare('SELECT * FROM posts').all() as Post[];
+  res.json(rows);
 });
 
 app.post('/posts', (req, res) => {
