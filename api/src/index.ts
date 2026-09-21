@@ -12,6 +12,10 @@ interface Post {
 const app: Express = express();
 const port = 3000;
 
+function isInvalidId(id: number): boolean {
+  return id <= 0 || !Number.isInteger(id);
+}
+
 function getPost(id: number): Post | undefined {
   const statement = db.prepare('SELECT * FROM posts WHERE id = ?');
   const row = statement.get(id) as Post | undefined;
@@ -55,7 +59,7 @@ app.post('/posts', (req, res) => {
 app.get('/posts/:id', (req, res) => {
   const id = Number(req.params.id);
 
-  if (id <= 0 || !Number.isInteger(id)) {
+  if (isInvalidId(id)) {
     res.status(400).json({ message: 'URLの形式が正しくありません' });
     return;
   }

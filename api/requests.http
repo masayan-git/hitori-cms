@@ -21,7 +21,7 @@ POST http://localhost:3000/posts/
 Content-Type: application/json
 
 {
-  "slug": "232fd55ddtttt",
+  "slug": "244444eeefd55ddtttt",
   "title": "タイトルですrerererere",
   "body": "本文です",
   "published": 1
