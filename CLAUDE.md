@@ -60,16 +60,21 @@ hitori-cms/
 ├── CLAUDE.md
 ├── .gitignore
 ├── .nvmrc
+├── .prettierrc         セミコロンあり、シングルクォート
 ├── docs/
-│   ├── later.md        後でやるリスト
+│   ├── later.md        後でやるリスト(未作成。最初の項目が出た時に作る)
 │   ├── log/            開発ログ(日付ごとのファイル)
 │   └── private/        gitignore 済み
 ├── api/                package.json と tsconfig.json を持つ
-│   └── src/index.ts
+│   ├── requests.http   動作確認用(VS Code の REST Client 拡張)
+│   ├── data/           DB ファイルの置き場。`.gitkeep` だけをコミット(`*.db` は gitignore 済み)
+│   └── src/
+│       ├── index.ts    Express のアプリとルート
+│       └── db.ts       DB を開き、起動時にテーブルを作る
 └── admin/              段階6で作成
 ```
 
-コマンドは `api` フォルダ内で実行する:`npm run dev`(`node --watch src/index.ts`)、`npm run typecheck`。
+コマンドは `api` フォルダ内で実行する:`npm run dev`(`node --watch src/index.ts`)、`npm run typecheck`、`npm run format`(`prettier --write src`)。DB のパス `data/hitori.db` はカレントディレクトリ基準なので、npm スクリプト経由で起動する前提になっている。
 
 ## ロードマップ
 
@@ -91,23 +96,32 @@ hitori-cms/
 
 段階は学習の区切りであって、1日の作業の区切りではない。段階が終わっても、開発者が続けたければ、そのまま次の段階に進む。Claude から「今日はここまで」と切り上げない。
 
-段階1からの引き継ぎ(2026-09-20 完了):
+段階2からの引き継ぎ(2026-09-21 完了):
 
-- `api/src/index.ts` に、`Post` 型(id、title、body)、配列 `postsContents`、採番用の変数 `postId`、保存用の関数 `savePost`、`GET /posts`、`POST /posts`(201 を返す)がある
-- 動作確認は `api/requests.http`(VS Code の REST Client 拡張)で行っている
-- `req.body` は `any` のまま `savePost` に渡している。title を抜いた JSON や数値の title も保存できてしまう。開発者はこの問題を理解済みで、検証は段階3で書く
-- セミコロンの抜けが多い。Prettier の導入は `docs/later.md` の候補(ファイルは未作成)
+- `api/src/db.ts` が `data/hitori.db` を開き、起動時に `CREATE TABLE IF NOT EXISTS` で posts テーブルを作る。列は id(`INTEGER PRIMARY KEY`)、slug(`TEXT NOT NULL UNIQUE`)、title と body(`TEXT NOT NULL`)、published(`BOOLEAN NOT NULL`、`CHECK` で 0 か 1、`DEFAULT 0`)。slug と公開状態は段階2で入れると開発者が決めた。列を変える時は、テストデータしかないので DB ファイルを消して作り直している
+- `api/src/index.ts` に、`Post` 型(id、slug、title、body、`published: 0 | 1`)、`savePost`(名前付きプレースホルダで INSERT し、`lastInsertRowid` で SELECT し直して `Post | undefined` を返す。published は省略時に `?? 0` で補う)、`GET /posts`(`SELECT *` に `as Post[]`)、`POST /posts`(201)がある
+- 開発者が理解済みのこと:プレースホルダと SQL インジェクションの仕組み。`as` は検査ではなく約束であること(`.get()` に `as Post[]` と書いても tsc が通るのを体験した)。better-sqlite3 が同期 API で、`await` が要らず、INSERT と SELECT の間に割り込まれない理由。キーがない時は better-sqlite3 がバインドで止め(`RangeError`)、値が null の時は SQLite が制約で止める(`SqliteError`)という層の違い。SQLite に真偽値の型はなく、型名は型アフィニティで解釈されること。`DEFAULT` は INSERT で列を省略した時だけ働くこと
+- 未解決で、段階3で扱うこと:`req.body` は `any` のまま `savePost` に渡している。キーの欠落、null、slug の重複、`"published": true`(better-sqlite3 は真偽値をバインドできない)は、どれも例外になり、Express の既定の 500 とスタックトレースが返る。`"published": null` は 0 として保存される。`savePost` が `undefined` を返した場合の扱いも決めていない。JSON 上の公開状態が 0 と 1 のままで、`true` / `false` との変換をどこでやるかも未決定
+- 細かい残り(必須ではない。開発者がやりたい時にやる):`index.ts` の INSERT 文が 1 行で長い。`savePost` の引数の型が `Post` と重複している(`Omit`)。`db.ts` の `CHECK` の `==` と行末の空白。`prepare` を呼び出しのたびに実行している。`requests.http` の slug が URL 向きの文字列になっていない
 
-段階2の課題:
+段階3の課題:
 
-- better-sqlite3 と、その型定義を導入する(DB ファイルは `.gitignore` 済み)
-- posts テーブルを設計する。どの列を、どの型と制約で持つかを、開発者が自分で決める。第1版の項目のうち slug と公開状態を、今入れるか後で足すかも、開発者が考えて決める
-- サーバーの起動時に、テーブルがなければ作る
-- `GET /posts` を SELECT に、`POST /posts` を INSERT に置き換える。配列 `postsContents` と変数 `postId` をなくし、id の採番は DB に任せる
-- サーバーを再起動しても、記事が残っていることを確認する
-- 罠として残してあること:SQL に値を文字列連結やテンプレートリテラルで埋め込む書き方。先には教えない。ただし危険な書き方なので、そう書いてきたらレビューで必ず指摘し、理由(SQL インジェクション)とプレースホルダを調べるよう促す
-- 気づいてほしいこと:DB から取り出した行の型も、TypeScript は保証しない。`req.body` と同じく「外から来るデータ」である
-- 気づいてほしいこと:better-sqlite3 は同期 API である。なぜ `await` が要らないのかを、説明できるようにする
+- `GET /posts/:id`(1件取得)、更新、`DELETE /posts/:id`(削除)を作る。更新を `PUT` にするか `PATCH` にするか、成功時に何をどのステータスコードで返すかは、開発者が調べて決める
+- 存在しない id には 404 を返す。`req.params.id` は文字列で来る。数値にできない id をどう扱うかも決める
+- `req.body` の検証を自分の手で書く(検証ライブラリは使わない。使いたくなったら `docs/later.md` へ)。`req.body` を `unknown` として受け取り、絞り込んでから `savePost` などに渡す。必須項目、型、空文字、slug に使える文字、published の値を確かめる。不正な入力には 400 と、理由の分かる JSON を返す。エラーの JSON の形は一度決めて、全部のエンドポイントで揃える
+- 公開状態を API の JSON でどう表すか(0 と 1 のままか、`true` と `false` か)と、変換する場所を決める
+- slug の重複(`UNIQUE` 違反)を、500 ではなく適切なステータスコードで返す。`SqliteError` をどう見分けるかを調べる
+- Express 5 のエラー処理ミドルウェアを書き、想定外の例外でもスタックトレースを返さず、JSON で 500 を返す。壊れた JSON を送った時の動作も確認する
+- `requests.http` に、成功する例だけでなく失敗する例(不正な入力、存在しない id、重複した slug)も足して確認する
+- 罠として残してあること(先には教えない。書いてきたらレビューで必ず指摘する):
+  - UPDATE や DELETE は、該当する行がなくてもエラーにならない。存在しない id に成功を返してしまう(`run()` の戻り値の `changes`)
+  - `req.body as 入力の型` と書いて検証した気になること。段階2で学んだ「`as` は約束」の再確認になる
+  - `PATCH` で SET 句を動的に組み立てる時に、`req.body` のキーをそのまま SQL に埋め込むこと。列名にはプレースホルダが使えない。値と同じく SQL インジェクションの入口になるので、許可した列名だけを使う必要がある
+  - UPDATE や DELETE の WHERE 句の書き忘れ
+- 気づいてほしいこと:検証を通った後の値には、`as` なしで型が付く。検証は、約束を本物の保証に変える作業である(キーワードは型の絞り込み、型ガード)
+- 気づいてほしいこと:入力を止める層は、自分の検証、better-sqlite3 のバインド、SQLite の制約の 3 つがある。利用者に返すエラーは自分の検証で出し、DB の制約は最後の保険として残す
+- 気づいてほしいこと:400、404、409、500 の違いは、「誰の間違いか」で説明できる
+- `index.ts` が長くなってきたら、ファイルを分けたくなるはず。分けるかどうかと分け方は開発者が決める。Claude から構成を押し付けない
 
 ## 作業の進め方
 
