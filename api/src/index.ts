@@ -12,6 +12,13 @@ interface Post {
 const app: Express = express();
 const port = 3000;
 
+function getPost(id: number): Post | undefined {
+  const statement = db.prepare('SELECT * FROM posts WHERE id = ?');
+  const row = statement.get(id) as Post | undefined;
+
+  return row;
+}
+
 function savePost(reqInput: {
   slug: string;
   title: string;
@@ -27,10 +34,7 @@ function savePost(reqInput: {
     published: reqInput.published ?? 0,
   }).lastInsertRowid;
 
-  const statement = db.prepare('SELECT * FROM posts WHERE id = ?');
-  const row = statement.get(lastInsertRowid) as Post | undefined;
-
-  return row;
+  return getPost(Number(lastInsertRowid));
 }
 
 app.use(express.json());
@@ -46,6 +50,24 @@ app.get('/posts', (_req, res) => {
 
 app.post('/posts', (req, res) => {
   res.status(201).json(savePost(req.body));
+});
+
+app.get('/posts/:id', (req, res) => {
+  const id = Number(req.params.id);
+
+  if (id <= 0 || !Number.isInteger(id)) {
+    res.status(400).json({ message: 'URLの形式が正しくありません' });
+    return;
+  }
+
+  const row = getPost(id);
+
+  if (row === undefined) {
+    res.status(404).json({ message: 'ページが存在しません' });
+    return;
+  }
+
+  res.json(row);
 });
 
 app.listen(port, () => {

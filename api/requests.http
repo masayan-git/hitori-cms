@@ -4,12 +4,24 @@ GET http://localhost:3000/
 ### 記事の一覧
 GET http://localhost:3000/posts/
 
+### 記事の詳細ページ
+GET http://localhost:3000/posts/1
+
+### 記事の詳細ページ エラー
+GET http://localhost:3000/posts/999999
+
+### 記事の詳細ページ エラー
+GET http://localhost:3000/posts/acg1
+
+### 記事の詳細ページ エラー
+GET http://localhost:3000/posts/1.0
+
 ### 記事の作成
 POST http://localhost:3000/posts/
 Content-Type: application/json
 
 {
-  "slug": "232555ddtttt",
+  "slug": "232fd55ddtttt",
   "title": "タイトルですrerererere",
   "body": "本文です",
   "published": 1
