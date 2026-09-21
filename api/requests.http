@@ -16,6 +16,16 @@ GET http://localhost:3000/posts/acg1
 ### 記事の詳細ページ エラー
 GET http://localhost:3000/posts/1.0
 
+
+### 記事の削除
+DELETE http://localhost:3000/posts/8
+
+### 記事の削除 エラー
+DELETE http://localhost:3000/posts/4n
+
+### 記事の削除 エラー
+DELETE http://localhost:3000/posts/dfdfdfdfd
+
 ### 記事の作成
 POST http://localhost:3000/posts/
 Content-Type: application/json

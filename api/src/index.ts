@@ -23,6 +23,13 @@ function getPost(id: number): Post | undefined {
   return row;
 }
 
+function deletePost(id: number): boolean {
+  const statement = db.prepare('DELETE FROM posts WHERE id = ?');
+  const result = statement.run(id);
+
+  return result.changes === 1;
+}
+
 function savePost(reqInput: {
   slug: string;
   title: string;
@@ -72,6 +79,25 @@ app.get('/posts/:id', (req, res) => {
   }
 
   res.json(row);
+});
+
+app.delete('/posts/:id', (req, res) => {
+  const id = Number(req.params.id);
+
+  if (isInvalidId(id)) {
+    res.status(400).json({ message: 'URLの形式が正しくありません' });
+    return;
+  }
+
+  const isSuccess = deletePost(id);
+
+  if (!isSuccess) {
+    res.status(404).json({ message: 'ページが存在しません' });
+
+    return;
+  }
+
+  res.status(204).end();
 });
 
 app.listen(port, () => {
