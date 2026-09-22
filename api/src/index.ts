@@ -1,12 +1,21 @@
-import express, { type Express } from 'express';
+import express, {
+  type Express,
+  type Request,
+  type Response,
+  type NextFunction,
+} from 'express';
 import { db } from './db.ts';
+import Database from 'better-sqlite3';
 
-interface Post {
-  id: number;
+interface InputPost {
   slug: string;
   title: string;
   body: string;
   published: 0 | 1;
+}
+
+interface Post extends InputPost {
+  id: number;
 }
 
 const app: Express = express();
@@ -14,6 +23,29 @@ const port = 3000;
 
 function isInvalidId(id: number): boolean {
   return id <= 0 || !Number.isInteger(id);
+}
+
+function isPost(post: unknown): post is InputPost {
+  if (typeof post !== 'object' || post === null) return false;
+
+  return (
+    'title' in post &&
+    typeof post.title === 'string' &&
+    'slug' in post &&
+    typeof post.slug === 'string' &&
+    post.slug !== '' &&
+    'body' in post &&
+    typeof post.body === 'string' &&
+    'published' in post &&
+    (post.published === 0 || post.published === 1)
+  );
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    error instanceof Database.SqliteError &&
+    error.code === 'SQLITE_CONSTRAINT_UNIQUE'
+  );
 }
 
 function getPost(id: number): Post | undefined {
@@ -30,20 +62,22 @@ function deletePost(id: number): boolean {
   return result.changes === 1;
 }
 
-function savePost(reqInput: {
-  slug: string;
-  title: string;
-  body: string;
-  published?: 0 | 1;
-}): Post | undefined {
+function putPost(id: number, post: InputPost): boolean {
+  const put = db.prepare(
+    'UPDATE posts SET slug = @slug, title = @title, body = @body, published = @published WHERE id = @id',
+  );
+
+  const result = put.run({ ...post, id });
+
+  return result.changes === 1;
+}
+
+function savePost(post: InputPost): Post | undefined {
   const insert = db.prepare(
     'INSERT INTO posts (slug, title, body, published) VALUES (@slug, @title, @body, @published)',
   );
 
-  const lastInsertRowid = insert.run({
-    ...reqInput,
-    published: reqInput.published ?? 0,
-  }).lastInsertRowid;
+  const lastInsertRowid = insert.run(post).lastInsertRowid;
 
   return getPost(Number(lastInsertRowid));
 }
@@ -60,7 +94,24 @@ app.get('/posts', (_req, res) => {
 });
 
 app.post('/posts', (req, res) => {
-  res.status(201).json(savePost(req.body));
+  const post: unknown = req.body;
+
+  if (!isPost(post)) {
+    res.status(400).json({ message: '記事の形式が正しくありません' });
+
+    return;
+  }
+
+  try {
+    const savedPost = savePost(post);
+    res.status(201).json(savedPost);
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      res.status(409).json({ message: 'slugが重複しています' });
+    } else {
+      throw error;
+    }
+  }
 });
 
 app.get('/posts/:id', (req, res) => {
@@ -81,6 +132,40 @@ app.get('/posts/:id', (req, res) => {
   res.json(row);
 });
 
+app.put('/posts/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const post: unknown = req.body;
+  if (isInvalidId(id)) {
+    res.status(400).json({ message: 'URLの形式が正しくありません' });
+
+    return;
+  }
+
+  if (!isPost(post)) {
+    res.status(400).json({ message: '記事の形式が正しくありません' });
+
+    return;
+  }
+
+  try {
+    const isSuccess = putPost(id, post);
+
+    if (!isSuccess) {
+      res.status(404).json({ message: 'ページが存在しません' });
+
+      return;
+    }
+
+    res.status(204).end();
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      res.status(409).json({ message: 'slugが重複しています' });
+    } else {
+      throw error;
+    }
+  }
+});
+
 app.delete('/posts/:id', (req, res) => {
   const id = Number(req.params.id);
 
@@ -98,6 +183,20 @@ app.delete('/posts/:id', (req, res) => {
   }
 
   res.status(204).end();
+});
+
+app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(error);
+  if (
+    error instanceof Error &&
+    'type' in error &&
+    error.type === 'entity.parse.failed'
+  ) {
+    res.status(400).json({ message: 'JSONの形式が正しくありません' });
+
+    return;
+  }
+  res.status(500).json({ message: '予期せぬエラーです' });
 });
 
 app.listen(port, () => {

@@ -18,7 +18,7 @@ GET http://localhost:3000/posts/1.0
 
 
 ### 記事の削除
-DELETE http://localhost:3000/posts/8
+DELETE http://localhost:3000/posts/9
 
 ### 記事の削除 エラー
 DELETE http://localhost:3000/posts/4n
@@ -31,7 +31,29 @@ POST http://localhost:3000/posts/
 Content-Type: application/json
 
 {
-  "slug": "244444eeefd55ddtttt",
+  "slug": "vdfdfddfdfvddd",
+  "title": "タイトルですrerererere",
+  "body": "本文です",
+  "published": 0,
+}
+
+### 記事の編集
+PUT http://localhost:3000/posts/10
+Content-Type: application/json
+
+{
+  "slug": "23255",
+  "title": "m",
+  "body": "本文です",
+  "published": 1
+}
+
+### 記事の編集 エラー
+PUT http://localhost:3000/posts/10
+Content-Type: application/json
+
+{
+  "slug": 222,
   "title": "タイトルですrerererere",
   "body": "本文です",
   "published": 1
