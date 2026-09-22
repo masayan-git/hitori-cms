@@ -62,14 +62,14 @@ function deletePost(id: number): boolean {
   return result.changes === 1;
 }
 
-function putPost(id: number, post: InputPost): boolean {
+function putPost(id: number, post: InputPost): Post | undefined {
   const put = db.prepare(
     'UPDATE posts SET slug = @slug, title = @title, body = @body, published = @published WHERE id = @id',
   );
 
   const result = put.run({ ...post, id });
 
-  return result.changes === 1;
+  return result.changes === 1 ? getPost(id) : undefined;
 }
 
 function savePost(post: InputPost): Post | undefined {
@@ -148,15 +148,15 @@ app.put('/posts/:id', (req, res) => {
   }
 
   try {
-    const isSuccess = putPost(id, post);
+    const row = putPost(id, post);
 
-    if (!isSuccess) {
+    if (row === undefined) {
       res.status(404).json({ message: 'ページが存在しません' });
 
       return;
     }
 
-    res.status(204).end();
+    res.status(200).json(row);
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       res.status(409).json({ message: 'slugが重複しています' });
