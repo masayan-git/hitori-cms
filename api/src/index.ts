@@ -25,20 +25,31 @@ function isInvalidId(id: number): boolean {
   return id <= 0 || !Number.isInteger(id);
 }
 
-function isPost(post: unknown): post is InputPost {
-  if (typeof post !== 'object' || post === null) return false;
+function adjustPost(post: unknown): InputPost | undefined {
+  if (typeof post !== 'object' || post === null) return undefined;
 
-  return (
+  if (
     'title' in post &&
     typeof post.title === 'string' &&
     'slug' in post &&
     typeof post.slug === 'string' &&
-    post.slug !== '' &&
     'body' in post &&
     typeof post.body === 'string' &&
     'published' in post &&
     (post.published === 0 || post.published === 1)
-  );
+  ) {
+    const trimmed: InputPost = {
+      slug: post.slug.trim(),
+      title: post.title.trim(),
+      body: post.body,
+      published: post.published,
+    };
+
+    if (trimmed.title === '' || trimmed.slug === '') return undefined;
+    return trimmed;
+  } else {
+    return undefined;
+  }
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
@@ -94,9 +105,9 @@ app.get('/posts', (_req, res) => {
 });
 
 app.post('/posts', (req, res) => {
-  const post: unknown = req.body;
+  const post = adjustPost(req.body);
 
-  if (!isPost(post)) {
+  if (post === undefined) {
     res.status(400).json({ message: '記事の形式が正しくありません' });
 
     return;
@@ -134,14 +145,14 @@ app.get('/posts/:id', (req, res) => {
 
 app.put('/posts/:id', (req, res) => {
   const id = Number(req.params.id);
-  const post: unknown = req.body;
+  const post = adjustPost(req.body);
   if (isInvalidId(id)) {
     res.status(400).json({ message: 'URLの形式が正しくありません' });
 
     return;
   }
 
-  if (!isPost(post)) {
+  if (post === undefined) {
     res.status(400).json({ message: '記事の形式が正しくありません' });
 
     return;

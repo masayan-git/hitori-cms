@@ -31,10 +31,21 @@ POST http://localhost:3000/posts/
 Content-Type: application/json
 
 {
-  "slug": "vdfdfddfdfvddd",
-  "title": "タイトルですrerererere",
-  "body": "本文です",
-  "published": 0,
+  "slug": "   111ddfdfvddd       ",
+  "title": "       タイトルですrerererere         ",
+  "body": "   本文です   ",
+  "published": 0
+
+}
+### 記事の作成 slug重複エラー
+POST http://localhost:3000/posts/
+Content-Type: application/json
+
+{
+  "slug": "   111ddfdfvddd       ",
+  "title": "       タイトルですrerererere         ",
+  "body": "   本文です   ",
+  "published": 0
 }
 
 ### 記事の編集
@@ -42,9 +53,9 @@ PUT http://localhost:3000/posts/10
 Content-Type: application/json
 
 {
-  "slug": "23255",
+  "slug": "  23255   ",
   "title": "mdfdfd",
-  "body": "本文です---",
+  "body": "   本文です---   ",
   "published": 1
 }
 
@@ -53,7 +64,7 @@ PUT http://localhost:3000/posts/10
 Content-Type: application/json
 
 {
-  "slug": 222,
+  "slug": "111ddfdfvddd",
   "title": "タイトルですrerererere",
   "body": "本文です",
   "published": 1
