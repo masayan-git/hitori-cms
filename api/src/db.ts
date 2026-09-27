@@ -11,3 +11,9 @@ db.exec(`CREATE TABLE IF NOT EXISTS posts(
   body TEXT NOT NULL,
   published BOOLEAN NOT NULL CHECK(published == 0 OR published == 1) DEFAULT 0 
 )`);
+
+db.exec(`CREATE TABLE IF NOT EXISTS users(
+  id INTEGER PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL
+)`);
