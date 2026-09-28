@@ -12,7 +12,7 @@ import {
   putPost,
   savePost,
   type InputPost,
-} from './models/posts.ts';
+} from './models/post.ts';
 
 const app: Express = express();
 const port = 3000;
