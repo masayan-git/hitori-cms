@@ -1,4 +1,4 @@
-import { db } from '../db.ts';
+import { db } from '../db/connection.ts';
 
 export interface InputPost {
   slug: string;

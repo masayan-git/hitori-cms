@@ -68,13 +68,47 @@ hitori-cms/
 ├── api/                package.json と tsconfig.json を持つ
 │   ├── requests.http   動作確認用(VS Code の REST Client 拡張)
 │   ├── data/           DB ファイルの置き場。`.gitkeep` だけをコミット(`*.db` は gitignore 済み)
-│   └── src/
-│       ├── index.ts    Express のアプリとルート
-│       └── db.ts       DB を開き、起動時にテーブルを作る
+│   ├── script/
+│   │   ├── create-user.ts   初期ユーザーを作る(`npm run create-user`)
+│   │   └── playground.ts    試し書き用。gitignore 済み
+│   └── src/            役目ごとのフォルダに分ける(下の「src の構成」)
 └── admin/              段階6で作成
 ```
 
-コマンドは `api` フォルダ内で実行する:`npm run dev`(`node --watch src/index.ts`)、`npm run typecheck`、`npm run format`(`prettier --write src`)。DB のパス `data/hitori.db` はカレントディレクトリ基準なので、npm スクリプト経由で起動する前提になっている。
+### src の構成
+
+開発者が、Rails に近い「役目ごとに分ける」形を選んだ(2026-09-28)。規模には過剰と理解したうえで、この形に慣れるための選択。この方向で進める。要件に合わせて変えてよい。
+
+```
+src/
+├── index.ts               アプリの準備と起動、ルートの登録、エラー処理ミドルウェア
+├── db/
+│   ├── connection.ts      DB を開く(foreign_keys = ON)、テーブルを作る
+│   └── errors.ts          isUniqueConstraintError
+├── routes/                (未作成)express.Router。URL と controllers の対応だけ
+│   ├── posts.ts
+│   └── sessions.ts
+├── controllers/           req と res を扱い、ステータスコードを決める。SQL は書かない
+│   ├── posts.ts           index、show、create、update、destroy
+│   └── sessions.ts        (未作成)ログイン = create、ログアウト = destroy
+├── models/                DB とのやり取りだけ。req、res、ステータスコードを知らない
+│   ├── post.ts            型 InputPost と Post、posts テーブルの関数
+│   ├── user.ts            (未作成)
+│   └── session.ts         (未作成)
+├── validators/            入力を検査して整える
+│   ├── post.ts            adjustPost
+│   ├── session.ts         (未作成)ログインの入力
+│   └── params.ts          isInvalidId
+└── utils/
+    └── password.ts        hashPassword、verifyPassword(scrypt、非同期)
+```
+
+- 呼ぶ向きは一方通行:routes → controllers → models → db。逆向きに呼ばない
+- フォルダ名は役目、ファイル名は対象。ファイル名に `Controller` や `Validator` を付けない
+- 単数と複数は Rails の慣習:models と validators は単数、routes と controllers は複数
+- ログインとログアウトは「セッションを作る、消す」として `sessions` で扱う
+
+コマンドは `api` フォルダ内で実行する:`npm run dev`(`node --watch src/index.ts`)、`npm run typecheck`、`npm run format`(`prettier --write src script`)、`npm run create-user`。DB のパス `data/hitori.db` はカレントディレクトリ基準なので、npm スクリプト経由で起動する前提になっている。
 
 ## ロードマップ
 
@@ -135,7 +169,7 @@ hitori-cms/
   - ログイン失敗時に「ユーザーが存在しません」と「パスワードが違います」を出し分ける
   - 初期ユーザーの平文パスワードやハッシュをコミットする(`.env` は gitignore 済みか確かめる)
 - 気づいてほしいこと:Cookie が運ぶのは意味のない文字列 1 つで、意味はサーバー側の `sessions` にだけある(セッション方式)。401 と 403 の違い。ハッシュ関数が「遅い」ことが利点になる理由。ミドルウェアが `next()` を呼ぶことで次へ進む仕組み(`express.json()` と同じ側に立つ)。`unknown` からの絞り込みは Cookie の分解でも同じ
-- `index.ts` は 215 行。認証で users/sessions のテーブル、ハッシュ、Cookie の分解、ミドルウェア、3 つのルートが増える。ファイルを分けるかどうかと分け方は開発者が決める。Claude から構成を押し付けない
+- ファイルの分け方は、開発者が「src の構成」の形に決めた。新しいコードもこの形に沿って置く。構成を変えたくなったら、開発者と相談して決める
 - スコープ外(出てきたら `docs/later.md` へ):複数ユーザー、権限、パスワードの変更・リセット、レート制限、CSRF トークン(SameSite で第1版は足りる)、2 要素認証
 
 ## 作業の進め方

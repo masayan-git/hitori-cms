@@ -1,6 +1,6 @@
 import { createInterface } from 'node:readline/promises';
 import { hashPassword } from '../src/utils/password.ts';
-import { db } from '../src/db.ts';
+import { db } from '../src/db/connection.ts';
 
 const rl = createInterface({
   input: process.stdin,
