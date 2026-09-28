@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 
 export const db = new Database('data/hitori.db');
+db.pragma('foreign_keys = ON');
 
 console.log('dbを開きました');
 
@@ -16,4 +17,11 @@ db.exec(`CREATE TABLE IF NOT EXISTS users(
   id INTEGER PRIMARY KEY,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL
+)`);
+
+db.exec(`CREATE TABLE IF NOT EXISTS sessions(
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  token TEXT NOT NULL UNIQUE,
+  expires_at INTEGER NOT NULL
 )`);
