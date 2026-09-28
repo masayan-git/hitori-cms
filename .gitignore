@@ -35,3 +35,6 @@ Thumbs.db
 
 # 個人的なメモ
 docs/private/
+
+# 動作確認用ファイル
+api/script/playground.ts
