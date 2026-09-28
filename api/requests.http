@@ -5,7 +5,7 @@ GET http://localhost:3000/
 GET http://localhost:3000/posts/
 
 ### 記事の詳細ページ
-GET http://localhost:3000/posts/1
+GET http://localhost:3000/posts/10
 
 ### 記事の詳細ページ エラー
 GET http://localhost:3000/posts/999999
